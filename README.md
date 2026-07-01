@@ -1,25 +1,50 @@
-# TunaOS Niri Installer — TUI frontend for fisherman
+# TunaOS Niri Installer — Quickshell + Go installer
 
-**Terminal UI (ratatui/crossterm) installer** for TunaOS that drives the fisherman bootc install backend. Designed for the Niri scrollable-tiling Wayland compositor.
+**Quickshell/QML + Go** installer for TunaOS, modeled on [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell)'s architecture. Runs on the Niri scrollable-tiling Wayland compositor.
 
-## Workflow
+## Architecture
 
-1. **Welcome** — brief intro
-2. **Disk Selection** — `lsblk -J` lists disks; navigate with ↑/↓, select with Enter
-3. **Confirm** — review and press Enter to install
-4. **Install Progress** — streams fisherman output (runs synchronously in TUI)
-5. **Done** — success/failure, press any key to exit
+```
+tuna-installer-niri/
+├── ui/installer.qml     # Quickshell QML wizard (welcome → disk → confirm → install → done)
+├── installer/main.go     # Go backend (disk discovery + fisherman orchestration)
+└── README.md
+```
 
 ## Build
 
+### Go backend
+
 ```bash
-cargo build --release
-cargo run --release
+cd installer
+go build -o tuna-installer-niri .
+./tuna-installer-niri discover-disks     # list block devices
+./tuna-installer-niri install '{...}'     # run fisherman with a JSON recipe
 ```
 
-## Recipe
+### QML frontend
 
-Produces the same JSON recipe as the Qt/KDE and COSMIC frontends.
+Requires [Quickshell](https://quickshell.org/):
+
+```bash
+quickshell ui/installer.qml
+```
+
+## Workflow
+
+1. **Welcome** — intro screen
+2. **Disk Selection** — calls `tuna-installer-niri discover-disks`, renders `lsblk -J` output
+3. **Confirm** — summary with hostname input
+4. **Install Progress** — polls Go backend output via Timer
+5. **Done** — success/failure
+
+## DBus Integration
+
+For tighter QML ↔ Go integration (future), expose the backend as a DBus service:
+
+- Service: `org.tunaos.Installer`
+- Object: `/org/tunaos/Installer`
+- Methods: `DiscoverDisks()`, `StartInstall(disk, hostname)`, `PollOutput()`, `PollStatus()`
 
 ## License
 
