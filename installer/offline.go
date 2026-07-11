@@ -17,9 +17,13 @@ func inFlatpak() bool {
 }
 
 // fishermanCommand returns the program+args that run fisherman with privileges.
+//
+// Flatpak runtimes ship no pkexec; escalate host-side. The live ISO symlinks
+// the flatpak-bundled fisherman to /usr/local/bin and installs the polkit
+// policy for it (tunaOS customize-live.sh).
 func fishermanCommand() []string {
 	if inFlatpak() {
-		return []string{"pkexec", "/app/bin/fisherman"}
+		return []string{"flatpak-spawn", "--host", "pkexec", "/usr/local/bin/fisherman"}
 	}
 	return []string{"sudo", "/usr/local/bin/fisherman"}
 }
