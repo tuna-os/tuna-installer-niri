@@ -52,13 +52,36 @@
       ]
     },
     {
+      "name": "cli11",
+      "buildsystem": "cmake-ninja",
+      "config-opts": [
+        "-DCLI11_BUILD_TESTS=OFF",
+        "-DCLI11_BUILD_EXAMPLES=OFF",
+        "-DCLI11_BUILD_DOCS=OFF"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/CLIUtils/CLI11.git",
+          "tag": "v2.4.2"
+        }
+      ]
+    },
+    {
       "name": "quickshell",
       "buildsystem": "cmake-ninja",
       "config-opts": [
         "-DCMAKE_BUILD_TYPE=Release",
         "-DCRASH_REPORTER=OFF",
+        "-DUSE_JEMALLOC=OFF",
         "-DSERVICE_PIPEWIRE=OFF",
-        "-DSERVICE_MPRIS=OFF"
+        "-DSERVICE_MPRIS=OFF",
+        "-DSERVICE_PAM=OFF",
+        "-DSERVICE_GREETD=OFF",
+        "-DHYPRLAND=OFF",
+        "-DI3=OFF",
+        "-DX11=OFF",
+        "-DSCREENCOPY=OFF"
       ],
       "sources": [
         {
