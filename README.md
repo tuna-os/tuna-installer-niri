@@ -49,3 +49,23 @@ For tighter QML ↔ Go integration (future), expose the backend as a DBus servic
 ## License
 
 GPL-3.0-only
+
+## Offline installs
+
+`tuna-installer-niri detect` reports the live-ISO image and embedded OCI
+stores as JSON; the QML layer uses it to offer "install this system, no
+download" and passes stores as `additionalImageStores`.
+
+## Development
+
+```bash
+cd installer && go build -o tuna-installer-backend .
+TUNA_BACKEND=$PWD/tuna-installer-backend quickshell -p ../ui/installer.qml
+```
+
+## Flatpak
+
+```bash
+flatpak-builder --user --install --force-clean build flatpak/org.tunaos.InstallerNiri.json
+flatpak run org.tunaos.InstallerNiri
+```

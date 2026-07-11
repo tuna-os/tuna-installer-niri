@@ -1,0 +1,84 @@
+{
+  "app-id": "org.tunaos.InstallerNiri",
+  "runtime": "org.kde.Platform",
+  "runtime-version": "6.9",
+  "sdk": "org.kde.Sdk",
+  "command": "tuna-installer-niri",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=wayland",
+    "--device=all",
+    "--filesystem=host",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--system-talk-name=org.freedesktop.PolicyKit1"
+  ],
+  "build-options": {
+    "env": {
+      "GOPATH": "/run/build/go-path",
+      "GOCACHE": "/run/build/go-cache",
+      "GOPROXY": "off"
+    }
+  },
+  "modules": [
+    {
+      "name": "go",
+      "buildsystem": "simple",
+      "build-commands": ["cp -r go /app/go"],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://go.dev/dl/go1.26.1.linux-amd64.tar.gz",
+          "sha256": "031f088e5d955bab8657ede27ad4e3bc5b7c1ba281f05f245bcc304f327c987a",
+          "strip-components": 0
+        }
+      ]
+    },
+    {
+      "name": "fisherman",
+      "buildsystem": "simple",
+      "build-commands": [
+        "PATH=/app/go/bin:$PATH go build -C fisherman -o /app/bin/fisherman ./cmd/fisherman",
+        "install -Dm644 data/images.json /app/share/fisherman/data/images.json",
+        "cp -r data/images /app/share/fisherman/data/images",
+        "install -Dm644 data/polkit/org.tunaos.Installer.policy /app/share/polkit-1/actions/org.tunaos.Installer.policy"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/projectbluefin/fisherman.git",
+          "branch": "dev"
+        }
+      ]
+    },
+    {
+      "name": "quickshell",
+      "buildsystem": "cmake-ninja",
+      "config-opts": [
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCRASH_REPORTER=OFF",
+        "-DSERVICE_PIPEWIRE=OFF",
+        "-DSERVICE_MPRIS=OFF"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://git.outfoxxed.me/quickshell/quickshell.git",
+          "tag": "v0.1.0"
+        }
+      ]
+    },
+    {
+      "name": "tuna-installer-niri",
+      "buildsystem": "simple",
+      "build-commands": [
+        "PATH=/app/go/bin:$PATH go build -C installer -o /app/bin/tuna-installer-backend .",
+        "mkdir -p /app/share/tuna-installer-niri",
+        "cp -r ui /app/share/tuna-installer-niri/ui",
+        "printf '#!/bin/sh\\nexec quickshell -p /app/share/tuna-installer-niri/ui/installer.qml \"$@\"\\n' > /app/bin/tuna-installer-niri",
+        "chmod 755 /app/bin/tuna-installer-niri"
+      ],
+      "sources": [{ "type": "dir", "path": ".." }]
+    }
+  ]
+}

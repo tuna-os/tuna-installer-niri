@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 )
 
@@ -23,21 +22,29 @@ type DiskInfo struct {
 	Transport string `json:"tran,omitempty"`
 }
 
-// Recipe is the fisherman install recipe
+// Recipe is the fisherman install recipe (see ../../INSTALLER-FRONTENDS.md §1).
 type Recipe struct {
 	Disk            string     `json:"disk"`
 	Filesystem      string     `json:"filesystem"`
 	BtrfsSubvolumes bool       `json:"btrfsSubvolumes"`
 	Encryption      Encryption `json:"encryption"`
-	Image           string     `json:"image"`
-	TargetImgref    string     `json:"targetImgref"`
-	SelinuxDisabled bool       `json:"selinuxDisabled"`
-	Hostname        string     `json:"hostname"`
+	// Image may be empty in live-ISO mode: bootc installs the running container.
+	Image            string   `json:"image,omitempty"`
+	TargetImgref     string   `json:"targetImgref,omitempty"`
+	Bootloader       string   `json:"bootloader,omitempty"`
+	ComposeFsBackend bool     `json:"composeFsBackend,omitempty"`
+	Flatpaks         []string `json:"flatpaks,omitempty"`
+	// AdditionalImageStores lists embedded OCI stores for offline installs.
+	AdditionalImageStores []string `json:"additionalImageStores,omitempty"`
+	DistroID              string   `json:"distroID"`
+	SelinuxDisabled       bool     `json:"selinuxDisabled"`
+	Hostname              string   `json:"hostname"`
 }
 
 type Encryption struct {
+	// "none", "luks-passphrase", "tpm2-luks", "tpm2-luks-passphrase"
 	Type       string `json:"type"`
-	Passphrase string `json:"passphrase"`
+	Passphrase string `json:"passphrase,omitempty"`
 }
 
 func main() {
@@ -45,6 +52,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Usage: tuna-installer-niri <command> [args...]")
 		fmt.Fprintln(os.Stderr, "Commands:")
 		fmt.Fprintln(os.Stderr, "  discover-disks     List available block devices as JSON")
+		fmt.Fprintln(os.Stderr, "  detect             Report live-ISO image and offline stores as JSON")
 		fmt.Fprintln(os.Stderr, "  install <recipe>   Run fisherman with the given recipe JSON")
 		os.Exit(1)
 	}
@@ -52,6 +60,8 @@ func main() {
 	switch os.Args[1] {
 	case "discover-disks":
 		discoverDisks()
+	case "detect":
+		detectEnvironment()
 	case "install":
 		if len(os.Args) < 3 {
 			fmt.Fprintln(os.Stderr, "Usage: tuna-installer-niri install <recipe-json>")
@@ -99,6 +109,22 @@ func discoverDisks() {
 	}
 }
 
+// detectEnvironment reports offline-install facts for the QML frontend.
+func detectEnvironment() {
+	stores := offlineStores()
+	result := map[string]any{
+		"liveImage":     liveISOImage(),
+		"offlineStores": stores,
+		"offlineImages": offlineImages(stores),
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(result); err != nil {
+		fmt.Fprintf(os.Stderr, "encode output: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 func runInstall(recipeJSON string) {
 	var recipe Recipe
 	if err := json.Unmarshal([]byte(recipeJSON), &recipe); err != nil {
@@ -106,39 +132,41 @@ func runInstall(recipeJSON string) {
 		os.Exit(1)
 	}
 
-	// Write recipe to temp file
-	tmpFile, err := os.CreateTemp("", "fisherman-recipe-*.json")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "create temp file: %v\n", err)
+	// Offline install support (spec §4): live-ISO mode allows an empty image;
+	// embedded stores are always passed — fisherman ignores unhelpful ones.
+	if recipe.Image == "" && liveISOImage() == "" {
+		fmt.Fprintln(os.Stderr, "invalid recipe: image is required outside live-ISO mode")
 		os.Exit(1)
 	}
-	defer os.Remove(tmpFile.Name())
+	if len(recipe.AdditionalImageStores) == 0 {
+		recipe.AdditionalImageStores = offlineStores()
+	}
+	if recipe.DistroID == "" {
+		recipe.DistroID = "tunaos"
+	}
 
-	enc := json.NewEncoder(tmpFile)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(recipe); err != nil {
+	data, err := json.MarshalIndent(recipe, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "encode recipe: %v\n", err)
+		os.Exit(1)
+	}
+	// 0600 under XDG_RUNTIME_DIR — the recipe may hold a passphrase.
+	recipePath, err := writeRecipe(data)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "write recipe: %v\n", err)
 		os.Exit(1)
 	}
-	tmpFile.Close()
+	defer os.Remove(recipePath)
 
-	// Run fisherman
-	cmd := exec.Command("fisherman", tmpFile.Name())
-	var stdout, stderr strings.Builder
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// pkexec /app/bin/fisherman in Flatpak, sudo /usr/local/bin/fisherman otherwise.
+	argv := append(fishermanCommand(), recipePath)
+	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	// Stream output line by line
-	// (In production, use a pipe and report progress via DBus or IPC)
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "fisherman failed: %v\n", err)
-		fmt.Fprint(os.Stdout, stderr.String())
 		os.Exit(1)
-	}
-
-	fmt.Print(stdout.String())
-	if stderr.Len() > 0 {
-		fmt.Fprint(os.Stdout, stderr.String())
 	}
 }
 
