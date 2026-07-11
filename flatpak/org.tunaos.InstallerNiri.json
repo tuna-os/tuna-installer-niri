@@ -17,7 +17,8 @@
     "env": {
       "GOPATH": "/run/build/go-path",
       "GOCACHE": "/run/build/go-cache",
-      "GOPROXY": "off"
+      "GOPROXY": "off",
+      "GOTOOLCHAIN": "local"
     }
   },
   "modules": [
