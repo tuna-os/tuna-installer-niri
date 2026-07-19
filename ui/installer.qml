@@ -24,7 +24,12 @@ ApplicationWindow {
     property string backendBin: Quickshell.env("TUNA_BACKEND") || "tuna-installer-backend"
 
     // Wizard state
-    property int currentPage: 0 // 0=welcome, 1=disk, 2=confirm, 3=progress, 4=done
+    property int currentPage: 0 // 0=welcome, 1=disk, 2=encryption, 3=confirm, 4=progress, 5=done
+    // Encryption was previously hardcoded to "none" in the recipe with no UI,
+    // so every install came out unencrypted (tuna-os/tunaOS#734).
+    property string encType: "none"
+    property string passphrase: ""
+    property bool hasTpm: false
     property var disks: []
     property var selectedDisk: ({})
     property string hostname: "tunaos"
@@ -46,6 +51,7 @@ ApplicationWindow {
                 try {
                     const facts = JSON.parse(text)
                     root.liveImage = facts.liveImage || ""
+                    root.hasTpm = facts.hasTpm === true
                     root.offlineStores = facts.offlineStores || []
                 } catch (e) { /* detect is best-effort */ }
             }
@@ -72,17 +78,19 @@ ApplicationWindow {
         }
         onExited: (code, status) => {
             root.installSuccess = (code === 0)
-            root.currentPage = 4
+            root.currentPage = 5
         }
     }
 
     function startInstall() {
         installLog = ""
-        currentPage = 3
+        currentPage = 4
         const recipe = {
             disk: "/dev/" + selectedDisk.name,
             filesystem: "xfs",
-            encryption: { type: "none" },
+            encryption: root.encType.endsWith("passphrase")
+                ? { type: root.encType, passphrase: root.passphrase }
+                : { type: root.encType },
             // Empty image = live-ISO self-install (bootc uses the running container)
             image: liveImage !== "" ? "" : defaultImage,
             hostname: hostname,
@@ -180,7 +188,109 @@ ApplicationWindow {
             }
         }
 
-        // Page 2: Confirm
+        // Page 2: Encryption
+        //
+        // Options mirror tuna-installer-xfce's ENCRYPTION_CHOICES, which is the
+        // reference implementation — same values, same wording, so the
+        // frontends describe the same choice identically. The tpm2 options are
+        // omitted entirely when the backend reports no TPM, rather than shown
+        // and then failing at install time.
+        ColumnLayout {
+            spacing: 12
+            anchors.margins: 40
+
+            Text {
+                text: "Disk Encryption"
+                font.pixelSize: 28; font.bold: true; color: "white"
+            }
+            Text {
+                text: "Encryption protects your files if the disk is lost or stolen. It cannot be turned on later without reinstalling."
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                color: "#8FA3B0"
+            }
+
+            ButtonGroup { id: encGroup }
+
+            Repeater {
+                model: [
+                    { value: "none",                 label: "No encryption",    explain: "Anyone with the disk can read your files." },
+                    { value: "luks-passphrase",      label: "Passphrase",       explain: "You'll type it at every boot." },
+                    { value: "tpm2-luks",            label: "TPM",              explain: "Unlocks automatically on this hardware." },
+                    { value: "tpm2-luks-passphrase", label: "TPM + passphrase", explain: "Automatic unlock, passphrase as fallback." }
+                ]
+                ColumnLayout {
+                    spacing: 2
+                    visible: !modelData.value.startsWith("tpm2") || root.hasTpm
+                    RadioButton {
+                        text: modelData.label
+                        ButtonGroup.group: encGroup
+                        checked: root.encType === modelData.value
+                        onClicked: root.encType = modelData.value
+                        palette.windowText: "white"
+                    }
+                    Text {
+                        text: modelData.explain
+                        color: "#5A6B78"; leftPadding: 32
+                    }
+                }
+            }
+
+            // Only meaningful for the *-passphrase modes.
+            ColumnLayout {
+                visible: root.encType.endsWith("passphrase")
+                spacing: 6
+                Layout.leftMargin: 32
+                TextField {
+                    id: passField
+                    placeholderText: "Enter passphrase"
+                    echoMode: TextInput.Password
+                    Layout.preferredWidth: 320
+                    onTextChanged: root.passphrase = text
+                }
+                TextField {
+                    id: passConfirm
+                    placeholderText: "Confirm passphrase"
+                    echoMode: TextInput.Password
+                    Layout.preferredWidth: 320
+                }
+                Text {
+                    id: passError
+                    color: "#C0392B"
+                    visible: text !== ""
+                }
+            }
+
+            Item { Layout.fillHeight: true }
+
+            RowLayout {
+                Button { text: "Back"; onClicked: root.currentPage = 1 }
+                Item { Layout.fillWidth: true }
+                Button {
+                    text: "Continue"
+                    onClicked: {
+                        // fisherman rejects a *-passphrase type with an empty
+                        // passphrase, but that only surfaces mid-install; catch
+                        // it here where it can still be corrected.
+                        if (root.encType.endsWith("passphrase")) {
+                            if (passField.text === "") {
+                                passError.text = "Enter a passphrase."
+                                return
+                            }
+                            if (passField.text !== passConfirm.text) {
+                                passError.text = "Passphrases do not match."
+                                return
+                            }
+                        }
+                        passError.text = ""
+                        root.passphrase = passField.text
+                        root.currentPage = 3
+                    }
+                }
+            }
+        }
+
+        // Page 3: Confirm
         ColumnLayout {
             spacing: 12
             anchors.margins: 40
@@ -203,7 +313,7 @@ ApplicationWindow {
                 Text { text: "Filesystem:"; font.bold: true; color: "#8FA3B0" }
                 Text { text: "xfs"; font.family: "monospace"; color: "white" }
                 Text { text: "Encryption:"; font.bold: true; color: "#8FA3B0" }
-                Text { text: "none"; font.family: "monospace"; color: "white" }
+                Text { text: root.encType; font.family: "monospace"; color: "white" }
                 Text { text: "Hostname:"; font.bold: true; color: "#8FA3B0" }
                 TextField {
                     text: root.hostname
@@ -223,7 +333,7 @@ ApplicationWindow {
 
             RowLayout {
                 Layout.fillWidth: true
-                Button { text: "Back"; onClicked: root.currentPage = 1 }
+                Button { text: "Back"; onClicked: root.currentPage = 2 }
                 Item { Layout.fillWidth: true }
                 Button {
                     text: "Install"
@@ -233,7 +343,7 @@ ApplicationWindow {
             }
         }
 
-        // Page 3: Install Progress
+        // Page 4: Install Progress
         ColumnLayout {
             spacing: 12
             anchors.margins: 40
@@ -258,7 +368,7 @@ ApplicationWindow {
             }
         }
 
-        // Page 4: Done
+        // Page 5: Done
         Item {
             ColumnLayout {
                 spacing: 20

@@ -116,6 +116,10 @@ func detectEnvironment() {
 		"liveImage":     liveISOImage(),
 		"offlineStores": stores,
 		"offlineImages": offlineImages(stores),
+		// The UI hides the TPM encryption options when this is false, rather
+		// than offering a choice that would fail later at install time. Same
+		// probe the XFCE and KDE frontends use.
+		"hasTpm": hasTPM(),
 	}
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -123,6 +127,13 @@ func detectEnvironment() {
 		fmt.Fprintf(os.Stderr, "encode output: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// hasTPM reports whether the machine exposes a TPM device, which is what the
+// tpm2-luks encryption modes require.
+func hasTPM() bool {
+	_, err := os.Stat("/sys/class/tpm/tpm0")
+	return err == nil
 }
 
 func runInstall(recipeJSON string) {
