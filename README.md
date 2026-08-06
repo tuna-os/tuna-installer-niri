@@ -1,5 +1,14 @@
 # TunaOS Niri Installer — Quickshell + Go installer
 
+<p align="center">
+  <img src="docs/screenshots/walkthrough.gif" alt="The TunaOS niri installer, screen by screen" width="640">
+</p>
+
+<p align="center">
+  <em>Rendered in CI from the real QML — see the <a href="docs/gui-walkthrough.md">walkthrough</a>.</em>
+</p>
+
+
 **Quickshell/QML + Go** installer for TunaOS, modeled on [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell)'s architecture. Runs on the Niri scrollable-tiling Wayland compositor.
 
 ## Architecture

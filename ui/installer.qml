@@ -12,6 +12,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "."
 
 ApplicationWindow {
     id: root
@@ -19,7 +20,25 @@ ApplicationWindow {
     width: 800
     height: 600
     visible: true
-    color: "#0A0E12" // --void (DESIGN.md)
+    color: Theme.surface
+
+    // Every Text here was coloured from a bespoke palette while the CONTROLS
+    // kept Qt Quick Controls' light defaults — the install-progress log pane
+    // rendered 93% white on a near-black background. Setting the palette once
+    // from the DMS tokens fixes every control at once, and keeps the installer
+    // looking like the shell it runs inside.
+    palette.window: Theme.surface
+    palette.windowText: Theme.surfaceText
+    palette.base: Theme.surfaceContainerLow
+    palette.alternateBase: Theme.surfaceContainer
+    palette.text: Theme.surfaceText
+    palette.button: Theme.surfaceContainerHigh
+    palette.buttonText: Theme.surfaceText
+    palette.highlight: Theme.primary
+    palette.highlightedText: Theme.primaryText
+    palette.placeholderText: Theme.outline
+    palette.mid: Theme.surfaceVariant
+    palette.dark: Theme.surfaceContainerLowest
 
     property string backendBin: Quickshell.env("TUNA_BACKEND") || "tuna-installer-backend"
 
@@ -116,7 +135,7 @@ ApplicationWindow {
                     text: "TunaOS Installer"
                     font.pixelSize: 28
                     font.weight: Font.Light
-                    color: "#2EC4B6" // --sonar
+                    color: Theme.primary // --sonar
                     Layout.alignment: Qt.AlignHCenter
                 }
                 Text {
@@ -124,7 +143,7 @@ ApplicationWindow {
                         ? "Install this system — no download required."
                         : "This wizard will guide you through installing TunaOS onto your computer."
                     font.pixelSize: 14
-                    color: "#8FA3B0" // --fog
+                    color: Theme.surfaceVariantText // --fog
                     wrapMode: Text.WordWrap
                     Layout.maximumWidth: 420
                     Layout.alignment: Qt.AlignHCenter
@@ -150,14 +169,14 @@ ApplicationWindow {
                 text: "Destination"
                 font.pixelSize: 22
                 font.weight: Font.Light
-                color: "#8FA3B0"
+                color: Theme.surfaceVariantText
             }
             Text {
                 text: root.selectedDisk.name !== undefined
                     ? "erases everything on " + root.selectedDisk.name
                     : "All data on the selected disk will be erased."
                 font.pixelSize: 13
-                color: "#F4A259" // --catch
+                color: Theme.warning // --catch
             }
 
             ListView {
@@ -201,13 +220,13 @@ ApplicationWindow {
 
             Text {
                 text: "Disk Encryption"
-                font.pixelSize: 28; font.bold: true; color: "white"
+                font.pixelSize: 28; font.bold: true; color: Theme.surfaceText
             }
             Text {
                 text: "Encryption protects your files if the disk is lost or stolen. It cannot be turned on later without reinstalling."
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
-                color: "#8FA3B0"
+                color: Theme.surfaceVariantText
             }
 
             ButtonGroup { id: encGroup }
@@ -231,7 +250,7 @@ ApplicationWindow {
                     }
                     Text {
                         text: modelData.explain
-                        color: "#5A6B78"; leftPadding: 32
+                        color: Theme.outline; leftPadding: 32
                     }
                 }
             }
@@ -256,7 +275,7 @@ ApplicationWindow {
                 }
                 Text {
                     id: passError
-                    color: "#C0392B"
+                    color: Theme.error
                     visible: text !== ""
                 }
             }
@@ -299,33 +318,33 @@ ApplicationWindow {
                 text: "Confirm Installation"
                 font.pixelSize: 22
                 font.weight: Font.Light
-                color: "#8FA3B0"
+                color: Theme.surfaceVariantText
             }
             GridLayout {
                 columns: 2
                 columnSpacing: 24
                 rowSpacing: 8
-                Text { text: "Target Disk:"; font.bold: true; color: "#8FA3B0" }
+                Text { text: "Target Disk:"; font.bold: true; color: Theme.surfaceVariantText }
                 Text {
                     text: root.selectedDisk.name ? "/dev/" + root.selectedDisk.name : "—"
-                    font.family: "monospace"; color: "white"
+                    font.family: "monospace"; color: Theme.surfaceText
                 }
-                Text { text: "Filesystem:"; font.bold: true; color: "#8FA3B0" }
-                Text { text: "xfs"; font.family: "monospace"; color: "white" }
-                Text { text: "Encryption:"; font.bold: true; color: "#8FA3B0" }
-                Text { text: root.encType; font.family: "monospace"; color: "white" }
-                Text { text: "Hostname:"; font.bold: true; color: "#8FA3B0" }
+                Text { text: "Filesystem:"; font.bold: true; color: Theme.surfaceVariantText }
+                Text { text: "xfs"; font.family: "monospace"; color: Theme.surfaceText }
+                Text { text: "Encryption:"; font.bold: true; color: Theme.surfaceVariantText }
+                Text { text: root.encType; font.family: "monospace"; color: Theme.surfaceText }
+                Text { text: "Hostname:"; font.bold: true; color: Theme.surfaceVariantText }
                 TextField {
                     text: root.hostname
                     onTextChanged: root.hostname = text
                     font.family: "monospace"
                 }
-                Text { text: "Image:"; font.bold: true; color: "#8FA3B0" }
+                Text { text: "Image:"; font.bold: true; color: Theme.surfaceVariantText }
                 Text {
                     text: root.liveImage !== ""
                         ? root.liveImage + "  (this system, no download)"
                         : root.defaultImage
-                    color: "#8FA3B0"; font.pixelSize: 12; font.family: "monospace"
+                    color: Theme.surfaceVariantText; font.pixelSize: 12; font.family: "monospace"
                 }
             }
 
@@ -352,7 +371,7 @@ ApplicationWindow {
                 text: "Installing…"
                 font.pixelSize: 22
                 font.weight: Font.Light
-                color: "#8FA3B0"
+                color: Theme.surfaceVariantText
             }
 
             ScrollView {
@@ -378,7 +397,7 @@ ApplicationWindow {
                     text: root.installSuccess ? "✓ Installation Complete" : "✗ Installation Failed"
                     font.pixelSize: 28
                     font.weight: Font.Light
-                    color: root.installSuccess ? "#2EC4B6" : "#F4A259"
+                    color: root.installSuccess ? Theme.primary : Theme.warning
                     Layout.alignment: Qt.AlignHCenter
                 }
                 Text {
@@ -386,7 +405,7 @@ ApplicationWindow {
                         ? "Remove the installation media and restart your computer."
                         : "Check the installation log above for details."
                     font.pixelSize: 14
-                    color: "#8FA3B0"
+                    color: Theme.surfaceVariantText
                     Layout.alignment: Qt.AlignHCenter
                 }
                 Button {
