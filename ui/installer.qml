@@ -21,6 +21,24 @@ ApplicationWindow {
     visible: true
     color: "#0A0E12" // --void (DESIGN.md)
 
+    // Every Text in this file is coloured from the DESIGN.md palette, but the
+    // CONTROLS were left at Qt Quick Controls' defaults — which are light. The
+    // result was light-grey buttons and a near-white log pane on a #0A0E12
+    // background: the install-progress screen came out 93% white. Setting the
+    // palette once here fixes every control rather than restyling each one.
+    palette.window: "#0A0E12"      // --void
+    palette.windowText: "#E6EDF3"
+    palette.base: "#111A22"        // input / log background
+    palette.alternateBase: "#18222C"
+    palette.text: "#E6EDF3"
+    palette.button: "#18222C"
+    palette.buttonText: "#E6EDF3"
+    palette.highlight: "#2EC4B6"   // --sonar
+    palette.highlightedText: "#0A0E12"
+    palette.placeholderText: "#5A6B78"
+    palette.mid: "#2A3742"
+    palette.dark: "#0A0E12"
+
     property string backendBin: Quickshell.env("TUNA_BACKEND") || "tuna-installer-backend"
 
     // Wizard state
