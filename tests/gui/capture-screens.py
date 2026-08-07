@@ -33,6 +33,9 @@ from PyQt6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PyQt6.QtQuick import QQuickWindow  # noqa: E402
 from PyQt6 import sip  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import parity_report  # noqa: E402
+
 PAGES = [
     ("01-welcome", 0, "What the installer is about to do."),
     ("02-disk", 1, "Choose the target disk."),
@@ -68,16 +71,52 @@ def audit(image, name):
     """
     w, h = image.width(), image.height()
     counts, samples, ink = {}, 0, 0
+    luma_sum = luma_sq = 0
     for y in range(0, h, 4):
         for x in range(0, w, 4):
             c = image.pixel(x, y) & 0xFFFFFF
             counts[c] = counts.get(c, 0) + 1
             samples += 1
             r, g, b = (c >> 16) & 255, (c >> 8) & 255, c & 255
-            if (30 * r + 59 * g + 11 * b) // 100 > 60:
+            luma = (30 * r + 59 * g + 11 * b) // 100
+            luma_sum += luma
+            luma_sq += luma * luma
+            if luma > 60:
                 ink += 1  # the theme is near-black, so "ink" is the LIGHT pixels
+    # Grayscale stddev, normalised 0..1 — the same "is the screen blank"
+    # measure tunaOS's VM walkthrough takes with ImageMagick, computed from
+    # the pixels we already visit. Reported only; the thresholds below are
+    # this repo's and are unchanged.
+    mean = luma_sum / samples
+    var = max(luma_sq / samples - mean * mean, 0.0)
     return {"name": name, "w": w, "h": h, "colours": len(counts),
-            "flat": max(counts.values()) / samples, "ink": ink / samples}
+            "flat": max(counts.values()) / samples, "ink": ink / samples,
+            "stddev": (var ** 0.5) / 255.0}
+
+
+def page_text(item, acc=None):
+    """Every string the CURRENTLY VISIBLE page put in the QML scene.
+
+    This is what the parity report matches tunaOS's screen keywords against.
+    Reading the scene graph instead of OCRing the PNG is what lets this run
+    with no tesseract and no GPU, and it cannot misread a glyph.
+
+    Visibility is the whole trick. `installer.qml` builds all six pages up
+    front inside a StackLayout, so a naive walk of the tree collects every
+    page's text on every frame and credits every screen everywhere — the
+    exact false-parity failure tunaOS's spec file warns about. QQuickItem's
+    `visible` is EFFECTIVE visibility (a child of a hidden page reports
+    False), so pruning on it isolates one page.
+    """
+    acc = [] if acc is None else acc
+    for child in item.childItems():
+        if not child.isVisible():
+            continue
+        text = child.property("text")
+        if isinstance(text, str) and text.strip():
+            acc.append(text)
+        page_text(child, acc)
+    return acc
 
 
 def main():
@@ -109,18 +148,35 @@ def main():
         path = os.path.join(out, f"{name}.png")
         image.save(path)
         frames.append(path)
-        findings.append(audit(image, name))
+        finding = audit(image, name)
+        finding["png"] = path
+        finding["text"] = " ".join(page_text(window.contentItem()))
+        findings.append(finding)
 
     failures = []
     for f in findings:
         print(f"  {f['name']:14s} {f['w']}x{f['h']}  colours {f['colours']:5d}  "
               f"largest-flat {f['flat']*100:5.1f}%  ink {f['ink']*100:5.1f}%")
+        page_failures = []
         if f["colours"] < 20:
-            failures.append(f"{f['name']}: {f['colours']} colours — did not render")
+            page_failures.append(f"{f['name']}: {f['colours']} colours — did not render")
         if f["flat"] > 0.995:
-            failures.append(f"{f['name']}: {f['flat']*100:.1f}% one flat colour — blank")
+            page_failures.append(f"{f['name']}: {f['flat']*100:.1f}% one flat colour — blank")
         if f["ink"] < 0.002:
-            failures.append(f"{f['name']}: {f['ink']*100:.2f}% lit pixels — nothing drawn")
+            page_failures.append(f"{f['name']}: {f['ink']*100:.2f}% lit pixels — nothing drawn")
+        # Same verdict, same thresholds — recorded per page as well, so the
+        # parity report can name WHICH screen was blank rather than only how
+        # many were.
+        f["rendered"] = not page_failures
+        failures.extend(page_failures)
+
+    # Emitted before the failure gate on purpose: a frontend that renders a
+    # blank page is exactly the case tunaOS's parity matrix most needs a row
+    # for. Bailing out first would leave niri reading "_GPU_" forever, which
+    # is how the last crop of defects survived unseen.
+    parity_report.write_report(
+        out, "niri", findings,
+        harness="tests/gui/capture-screens.py (QML via PyQt6, offscreen)")
 
     if failures:
         for m in failures:
