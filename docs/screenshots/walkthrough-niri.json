@@ -8,10 +8,10 @@
   "ocr": false,
   "screens": {
     "welcome": true,
-    "disk": false,
+    "disk": true,
     "encryption": true,
     "summary": true,
-    "install": false,
+    "install": true,
     "done": true
   },
   "strict": true,
@@ -27,14 +27,19 @@
         "01-welcome"
       ],
       "matched_keywords": [
-        "get started"
+        "get started",
+        "welcome"
       ]
     },
     "disk": {
       "required": true,
-      "reached": false,
-      "on_pages": [],
-      "matched_keywords": []
+      "reached": true,
+      "on_pages": [
+        "02-disk"
+      ],
+      "matched_keywords": [
+        "destination"
+      ]
     },
     "encryption": {
       "required": false,
@@ -58,9 +63,15 @@
     },
     "install": {
       "required": false,
-      "reached": false,
-      "on_pages": [],
-      "matched_keywords": []
+      "reached": true,
+      "on_pages": [
+        "05-progress"
+      ],
+      "matched_keywords": [
+        "installing image",
+        "installing\u2026",
+        "partitioning"
+      ]
     },
     "done": {
       "required": false,
@@ -79,10 +90,10 @@
       "name": "01-welcome",
       "png": "docs/screenshots/01-welcome.png",
       "rendered": true,
-      "colours": 162,
-      "flat": 0.9815,
-      "ink": 0.009466666666666667,
-      "stddev": 0.043180558178677525
+      "colours": 191,
+      "flat": 0.9805333333333334,
+      "ink": 0.01,
+      "stddev": 0.04308275538376269
     },
     {
       "name": "02-disk",
@@ -131,7 +142,7 @@
     }
   ],
   "transition_pixels": [
-    13801,
+    14218,
     13126,
     16024,
     12883,
@@ -139,7 +150,8 @@
   ],
   "spec_drift": [
     "'disk' keywords differ from upstream",
-    "'install' keywords differ from upstream"
+    "'install' keywords differ from upstream",
+    "'welcome' keywords differ from upstream"
   ],
   "notes": "GPU-less capture: pages are driven programmatically and text is read from the widget tree, so this reports SCREEN PARITY only. It does not measure keyboard navigation, compositor rendering, or that the frontend launches under its real desktop \u2014 those stay the VM walkthrough's job."
 }

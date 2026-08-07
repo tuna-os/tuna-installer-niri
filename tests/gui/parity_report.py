@@ -59,13 +59,16 @@ SPEC_URL = ("https://raw.githubusercontent.com/tuna-os/tunaOS/main/"
             "tests/installer-screens.yaml")
 
 SCREENS = [
+    # No keyword may contain a product name: the frontends are branded per
+    # variant from os-release (Skipjack, Bonito, ...), so "install tunaos"
+    # matched nothing on a Skipjack ISO. Upstream removed those in
+    # tuna-os/tunaOS#1060; this copy follows.
     {"id": "welcome", "title": "Welcome", "required": True,
-     "keywords": ["welcome", "get started", "let's get", "begin",
-                  "install tunaos"]},
+     "keywords": ["welcome", "get started", "let's get", "begin"]},
     # Heading/prompt text, not the "Target Disk: vda" row on the summary.
     {"id": "disk", "title": "Disk / target selection", "required": True,
      "keywords": ["select target disk", "select a disk", "choose the disk",
-                  "available disks", "where tunaos will be installed"]},
+                  "available disks", "be installed", "destination"]},
     # NOT bare "encrypt": that matches the summary page's "Encryption: None"
     # field label, which is the opposite of having reached an encryption
     # screen. Require the screen's own heading or its passphrase prompt.
@@ -76,11 +79,14 @@ SCREENS = [
      "keywords": ["confirm installation", "review your choices", "summary",
                   "ready to install", "about to install"]},
     # NOT "%" and NOT bare "install": a single character matches OCR noise,
-    # and the disk page reads "where TunaOS will be installed". Progress
-    # screens say what they are DOING, so match that instead.
+    # and bare "install" matches the disk page's "will be installed". Progress
+    # screens say what they are DOING, so match that instead. Note the ellipsis
+    # in "installing…" — bare "installing" is a substring of the encryption
+    # page's "without reinstalling", which has produced a phantom install row.
     {"id": "install", "title": "Install progress", "required": False,
      "keywords": ["installation progress", "copying files", "deploying",
-                  "please wait", "writing image"]},
+                  "please wait", "writing image", "installing…",
+                  "partitioning", "installing image"]},
     {"id": "done", "title": "Finished / reboot", "required": False,
      "keywords": ["complete", "finished", "reboot", "restart", "success"]},
 ]
