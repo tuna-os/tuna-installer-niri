@@ -87,8 +87,16 @@ SCREENS = [
      "keywords": ["installation progress", "copying files", "deploying",
                   "please wait", "writing image", "installing…",
                   "partitioning", "installing image"]},
+    # NOT "reboot"/"restart", NOT bare "complete"/"finished"/"success": a
+    # LOGIN GREETER satisfies those. cosmic-greeter's power menu offers
+    # Restart, Power Off and Suspend, so tunaOS run 31183217981 — stuck on the
+    # greeter with the installer never launched — was still credited with
+    # reaching the FINISHED screen. Synced from tuna-os/tunaOS#1075.
     {"id": "done", "title": "Finished / reboot", "required": False,
-     "keywords": ["complete", "finished", "reboot", "restart", "success"]},
+     "keywords": ["installation complete", "installation finished",
+                  "is installed", "has been installed",
+                  "remove the installation media",
+                  "restart to boot", "reboot into"]},
 ]
 
 
