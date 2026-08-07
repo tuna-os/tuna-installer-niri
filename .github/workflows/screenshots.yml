@@ -39,6 +39,9 @@ jobs:
       - name: capture every screen
         run: python3 tests/gui/capture-screens.py docs/screenshots
 
+      # Also carries walkthrough-niri.json — the parity report tunaOS's
+      # installer matrix consumes (docs/INSTALLER-FRONTENDS.md). It is written
+      # into the same directory, so it needs no separate upload.
       - uses: actions/upload-artifact@v4
         # always(): the capture fails when a screen renders wrong, which is
         # exactly when the picture is needed.
