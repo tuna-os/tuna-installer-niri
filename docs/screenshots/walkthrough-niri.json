@@ -149,9 +149,7 @@
     14272
   ],
   "spec_drift": [
-    "'disk' keywords differ from upstream",
-    "'install' keywords differ from upstream",
-    "'welcome' keywords differ from upstream"
+    "'install' keywords differ from upstream"
   ],
   "notes": "GPU-less capture: pages are driven programmatically and text is read from the widget tree, so this reports SCREEN PARITY only. It does not measure keyboard navigation, compositor rendering, or that the frontend launches under its real desktop \u2014 those stay the VM walkthrough's job."
 }
