@@ -16,7 +16,7 @@ import "."
 
 ApplicationWindow {
     id: root
-    title: "TunaOS Installer"
+    title: root.productName + " Installer"
     width: 800
     height: 600
     visible: true
@@ -41,6 +41,15 @@ ApplicationWindow {
     palette.dark: Theme.surfaceContainerLowest
 
     property string backendBin: Quickshell.env("TUNA_BACKEND") || "tuna-installer-backend"
+
+    // Per-variant product name. tunaOS's branding pipeline
+    // (build_scripts/90-image-info.sh) computes a PRETTY_NAME per variant and
+    // writes it into /etc/os-release, which is why GNOME's welcome screen reads
+    // "Welcome to Skipjack". The backend's `detect` reads it back (preferring
+    // /run/host/etc/os-release, since this ships as a flatpak) and reports it
+    // here, so a Skipjack ISO says Skipjack rather than a hardcoded "TunaOS".
+    // "TunaOS" stays the fallback for when os-release yields nothing.
+    property string productName: "TunaOS"
 
     // Wizard state
     property int currentPage: 0 // 0=welcome, 1=disk, 2=encryption, 3=confirm, 4=progress, 5=done
@@ -72,6 +81,7 @@ ApplicationWindow {
                     root.liveImage = facts.liveImage || ""
                     root.hasTpm = facts.hasTpm === true
                     root.offlineStores = facts.offlineStores || []
+                    if (facts.productName) root.productName = facts.productName
                 } catch (e) { /* detect is best-effort */ }
             }
         }
@@ -132,7 +142,12 @@ ApplicationWindow {
                 anchors.centerIn: parent
 
                 Text {
-                    text: "TunaOS Installer"
+                    // "Welcome to <product>", matching the GNOME installer's
+                    // welcome screen. The leading "Welcome" is deliberate: the
+                    // screen-parity contract keys the welcome screen off
+                    // product-free words, and a bare "<product> Installer"
+                    // would match none of them.
+                    text: "Welcome to " + root.productName
                     font.pixelSize: 28
                     font.weight: Font.Light
                     color: Theme.primary // --sonar
@@ -141,7 +156,7 @@ ApplicationWindow {
                 Text {
                     text: root.liveImage !== ""
                         ? "Install this system — no download required."
-                        : "This wizard will guide you through installing TunaOS onto your computer."
+                        : "This wizard will guide you through installing " + root.productName + " onto your computer."
                     font.pixelSize: 14
                     color: Theme.surfaceVariantText // --fog
                     wrapMode: Text.WordWrap
