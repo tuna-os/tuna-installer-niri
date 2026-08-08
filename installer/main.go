@@ -54,6 +54,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "  discover-disks     List available block devices as JSON")
 		fmt.Fprintln(os.Stderr, "  detect             Report live-ISO image and offline stores as JSON")
 		fmt.Fprintln(os.Stderr, "  install <recipe>   Run fisherman with the given recipe JSON")
+		fmt.Fprintln(os.Stderr, "  readiness [page]   Record that the UI window presented a frame")
 		os.Exit(1)
 	}
 
@@ -68,6 +69,14 @@ func main() {
 			os.Exit(1)
 		}
 		runInstall(os.Args[2])
+	case "readiness":
+		// Called by the QML layer from ApplicationWindow.onFrameSwapped. See
+		// readiness.go for why the write lives on this side of the boundary.
+		page := ""
+		if len(os.Args) > 2 {
+			page = os.Args[2]
+		}
+		readinessStamp(page)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
 		os.Exit(1)
