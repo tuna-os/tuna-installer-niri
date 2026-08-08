@@ -53,6 +53,14 @@ ApplicationWindow {
 
     // Wizard state
     property int currentPage: 0 // 0=welcome, 1=disk, 2=encryption, 3=confirm, 4=progress, 5=done
+
+    // Slugs for the readiness stamp. Kept in the same order as currentPage
+    // above, and matching the names the other frontends use so the tunaOS
+    // screen contract reads one vocabulary rather than five.
+    function pageSlug(i) {
+        const slugs = ["welcome", "disk", "encryption", "confirm", "installing", "done"]
+        return (i >= 0 && i < slugs.length) ? slugs[i] : "unknown"
+    }
     // Encryption was previously hardcoded to "none" in the recipe with no UI,
     // so every install came out unencrypted (tuna-os/tunaOS#734).
     property string encType: "none"
@@ -70,6 +78,34 @@ ApplicationWindow {
     property string defaultImage: "ghcr.io/tuna-os/albacore:gnome"
 
     Component.onCompleted: detectProc.running = true
+
+    // Readiness stamp — see ../installer/readiness.go.
+    //
+    // tunaOS's installer-smoke.yml proves this frontend is up with
+    // `flatpak ps`, which answers "is the process alive" rather than "did the
+    // user get a window". Those already diverged: the COSMIC leg ran the
+    // process with no window ever appearing and the check stayed green.
+    //
+    // frameSwapped, NOT Component.onCompleted. onCompleted fires when the
+    // object tree finishes building, which happens whether or not anything
+    // ever reaches the screen — stamping there would reproduce exactly the
+    // gap this closes. frameSwapped means Qt swapped a frame to the
+    // compositor, which is the strongest claim of the five frontends.
+    //
+    // Fires on every frame, so `stamped` makes it a one-shot: this spawns a
+    // process, and doing that at 60Hz would be its own bug.
+    property bool stamped: false
+    onFrameSwapped: {
+        if (!root.stamped) {
+            root.stamped = true
+            readinessProc.running = true
+        }
+    }
+
+    Process {
+        id: readinessProc
+        command: [root.backendBin, "readiness", root.pageSlug(root.currentPage)]
+    }
 
     Process {
         id: detectProc
