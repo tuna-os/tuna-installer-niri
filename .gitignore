@@ -3,3 +3,7 @@ installer/tuna-installer-niri.exe
 *.o
 build/
 .flatpak-builder/
+
+# Python bytecode
+__pycache__/
+*.pyc
