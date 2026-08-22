@@ -15,9 +15,12 @@
 
 ```
 tuna-installer-niri/
-├── ui/installer.qml     # Quickshell QML wizard (welcome → disk → confirm → install → done)
-├── installer/main.go     # Go backend (disk discovery + fisherman orchestration)
-└── README.md
+├── ui/                    # Quickshell QML wizard and theme
+├── installer/             # Go backend, offline detection, readiness, and tests
+├── flatpak/               # Flatpak manifest for the packaged installer
+├── tests/                 # Headless GUI capture and parity-report tooling
+├── docs/gui-walkthrough.md # CI-generated screen-by-screen walkthrough
+└── DESIGN.md              # Interaction and visual design specification
 ```
 
 ## Build
@@ -43,9 +46,10 @@ quickshell ui/installer.qml
 
 1. **Welcome** — intro screen
 2. **Disk Selection** — calls `tuna-installer-niri discover-disks`, renders `lsblk -J` output
-3. **Confirm** — summary with hostname input
-4. **Install Progress** — polls Go backend output via Timer
-5. **Done** — success/failure
+3. **Encryption** — offers supported LUKS and TPM-backed choices
+4. **Confirm** — summary with hostname input
+5. **Install Progress** — streams the Go backend's output
+6. **Done** — success/failure
 
 ## DBus Integration
 

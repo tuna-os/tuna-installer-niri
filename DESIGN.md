@@ -1,7 +1,8 @@
 # tuna-installer-niri — Design
 
 Quickshell QML frontend running fullscreen on the Niri scrollable-tiling
-Wayland compositor. Shared flow/contract: `../INSTALLER-FRONTENDS.md`.
+Wayland compositor. The shared flow and contract are defined in the
+[installer frontend specification](https://github.com/tuna-os/tunaOS/blob/main/docs/INSTALLER-FRONTENDS.md).
 
 ## Direction
 
