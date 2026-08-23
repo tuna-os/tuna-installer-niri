@@ -1,8 +1,9 @@
 // TunaOS Niri Installer — Go backend
 //
-// Follows DankMaterialShell's architecture: Go backend services
-// exposed to QML via DBus or stdout-pipe for the installer.
-// This backend wraps fisherman and provides disk discovery.
+// A plain argv/stdout CLI, not a service: the QML frontend runs it with
+// Quickshell's Process for each operation (`discover-disks`, `detect`,
+// `install <recipe>`, `readiness [page]`) and parses what comes back on
+// stdout. This backend wraps fisherman and provides disk discovery.
 
 package main
 
@@ -11,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sync"
 )
 
 // DiskInfo represents a block device from lsblk
@@ -193,22 +193,3 @@ func runInstall(recipeJSON string) {
 		os.Exit(1)
 	}
 }
-
-// For QML integration via Quickshell, expose methods via a DBus service.
-// The QML frontend calls the Go backend through a simple process-pipe
-// (stdout JSON protocol) or DBus interface.
-//
-// Example QML import:
-//
-//	import org.tunaos.installer 1.0
-//
-//	InstallerBackend {
-//	    function discoverDiskins() { ... }
-//	    function startInstall(disk, hostname) { ... }
-//	    signal outputChanged(string log)
-//	    signal installFinished(bool success)
-//	}
-//
-// The DBus service name: org.tunaos.Installer
-// Object path: /org/tunaos/Installer
-var _ = sync.Mutex{} // ensure sync import is used for future thread-safe additions
