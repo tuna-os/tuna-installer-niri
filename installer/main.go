@@ -180,7 +180,7 @@ func runInstall(recipeJSON string) {
 		fmt.Fprintf(os.Stderr, "write recipe: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.Remove(recipePath)
+	defer os.RemoveAll(recipeDir(recipePath))
 
 	// pkexec /app/bin/fisherman in Flatpak, sudo /usr/local/bin/fisherman otherwise.
 	argv := append(fishermanCommand(), recipePath)
