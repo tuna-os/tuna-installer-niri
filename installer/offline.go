@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 func inFlatpak() bool {
@@ -136,22 +137,56 @@ func offlineImages(stores []string) []string {
 	return refs
 }
 
-// writeRecipe writes the recipe 0600 under XDG_RUNTIME_DIR (it may hold secrets).
+// writeRecipe writes the recipe 0600 into a fresh private directory under
+// XDG_RUNTIME_DIR (it may hold secrets). The caller removes the directory —
+// recipeDir gives it back from the returned path.
+//
+// The directory matters as much as the file mode. This used to be a fixed
+// <base>/tuna-installer created with os.MkdirAll, writing to the constant
+// name recipe.json. When XDG_RUNTIME_DIR is unset — the default under sudo
+// (env_reset strips it), from a TTY, and from any launcher that is not a
+// logind session — base is /tmp, so the whole path was predictable. MkdirAll
+// returns nil for an existing directory without correcting its mode, so a
+// pre-created 0777 /tmp/tuna-installer was adopted as-is, and os.WriteFile
+// opens without O_EXCL or O_NOFOLLOW, so the predictable filename could be
+// pre-planted as a symlink or swapped after the write.
+//
+// That path is handed straight to sudo/pkexec fisherman, so controlling it
+// means choosing the image root installs, the disk it goes on, whether
+// encryption is applied, and the initial user account.
+//
+// os.MkdirTemp creates a 0700 directory with an unpredictable name and
+// O_EXCL semantics; O_EXCL|O_NOFOLLOW on the file itself turns a pre-planted
+// file or symlink into a hard failure instead of a redirected write.
 func writeRecipe(data []byte) (string, error) {
 	base := os.Getenv("XDG_RUNTIME_DIR")
 	if base == "" {
 		base = os.TempDir()
 	}
-	dir := filepath.Join(base, "tuna-installer")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	dir, err := os.MkdirTemp(base, "tuna-installer-")
+	if err != nil {
 		return "", err
 	}
 	path := filepath.Join(dir, "recipe.json")
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0o600)
+	if err != nil {
+		os.RemoveAll(dir)
+		return "", err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		os.RemoveAll(dir)
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		os.RemoveAll(dir)
 		return "", err
 	}
 	return path, nil
 }
+
+// recipeDir is the private directory writeRecipe created for path.
+func recipeDir(path string) string { return filepath.Dir(path) }
 
 // productName returns the PRETTY_NAME from os-release — the per-variant
 // product name ("Skipjack", "Bonito", ...) that tunaOS's branding pipeline
