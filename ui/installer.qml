@@ -71,6 +71,10 @@ ApplicationWindow {
     property string hostname: "tunaos"
     property bool installSuccess: false
     property string installLog: ""
+    // Recipe JSON awaiting the backend child's stdin channel (fed on
+    // Process.started). Kept on the root so the passphrase-bearing recipe
+    // never appears in the install command argv (see #22).
+    property string pendingRecipe: ""
 
     // Offline facts from `detect` (spec §4)
     property string liveImage: ""
@@ -135,6 +139,17 @@ ApplicationWindow {
 
     Process {
         id: installProc
+        // The recipe may hold a LUKS passphrase. Feed it over stdin
+        // (Process.write) instead of argv: /proc/PID/cmdline is
+        // world-readable, so an argv recipe leaks the passphrase to any
+        // local user while the backend runs. Quickshell starts the child
+        // asynchronously, so write on the started signal — writing before
+        // the child's stdin channel is open would drop the recipe.
+        stdinEnabled: true
+        onStarted: {
+            installProc.write(root.pendingRecipe)
+            root.pendingRecipe = ""
+        }
         stdout: SplitParser {
             onRead: data => root.installLog += data + "\n"
         }
@@ -163,8 +178,12 @@ ApplicationWindow {
             selinuxDisabled: true,
             additionalImageStores: offlineStores
         }
-        installProc.command = [root.backendBin, "install", JSON.stringify(recipe)]
+        installProc.command = [root.backendBin, "install"]
+        root.pendingRecipe = JSON.stringify(recipe)
         installProc.running = true
+        // The recipe is fed over stdin on Process.started — never argv, so
+        // the LUKS passphrase does not leak via /proc/PID/cmdline. See
+        // tuna-os/tuna-installer-niri#22.
     }
 
     StackLayout {
