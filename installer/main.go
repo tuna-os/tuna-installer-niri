@@ -10,6 +10,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -64,11 +65,16 @@ func main() {
 	case "detect":
 		detectEnvironment()
 	case "install":
-		if len(os.Args) < 3 {
-			fmt.Fprintln(os.Stderr, "Usage: tuna-installer-niri install <recipe-json>")
+		// The recipe may hold a LUKS passphrase; read it from stdin rather
+		// than argv so it never shows up in /proc/PID/cmdline (world-readable
+		// on Linux). The QML frontend writes it with Quickshell's
+		// Process.write().
+		recipeJSON, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "read recipe: %v\n", err)
 			os.Exit(1)
 		}
-		runInstall(os.Args[2])
+		runInstall(string(recipeJSON))
 	case "readiness":
 		// Called by the QML layer from ApplicationWindow.onFrameSwapped. See
 		// readiness.go for why the write lives on this side of the boundary.
@@ -150,6 +156,10 @@ func hasTPM() bool {
 }
 
 func runInstall(recipeJSON string) {
+	if len(recipeJSON) == 0 {
+		fmt.Fprintln(os.Stderr, "invalid recipe: empty")
+		os.Exit(1)
+	}
 	var recipe Recipe
 	if err := json.Unmarshal([]byte(recipeJSON), &recipe); err != nil {
 		fmt.Fprintf(os.Stderr, "invalid recipe: %v\n", err)

@@ -11,9 +11,16 @@ QtObject {
 
     property var command: []
     property bool running: false
+    property bool stdinEnabled: false
     property var stdout: null
     property var stderr: null
     signal exited(int code, int status)
+    signal started()
+
+    // Mirror the real Process: write() is fed on started(). The real
+    // backend reads the recipe from stdin so the LUKS passphrase never
+    // lands in /proc/PID/cmdline; here it is simply discarded.
+    function write(data) { }
 
     // Canned backend output. Shapes match installer/main.go: `detect` returns
     // offline facts, `discover-disks` returns parsed lsblk.
@@ -31,6 +38,7 @@ QtObject {
 
     onRunningChanged: {
         if (!running) return
+        started()
         const sub = command.length > 1 ? command[1] : ""
         const payload = fixtures[sub] !== undefined ? fixtures[sub] : ""
         if (stdout && stdout.feed) stdout.feed(payload)
