@@ -100,7 +100,10 @@
         "mkdir -p /app/share/tuna-installer-niri",
         "cp -r ui /app/share/tuna-installer-niri/ui",
         "printf '#!/bin/sh\\nexec quickshell -p /app/share/tuna-installer-niri/ui/installer.qml \"$@\"\\n' > /app/bin/tuna-installer-niri",
-        "chmod 755 /app/bin/tuna-installer-niri"
+        "chmod 755 /app/bin/tuna-installer-niri",
+        "install -Dm644 data/org.tunaos.InstallerNiri.desktop /app/share/applications/org.tunaos.InstallerNiri.desktop",
+        "install -Dm644 data/org.tunaos.InstallerNiri.metainfo.xml /app/share/metainfo/org.tunaos.InstallerNiri.metainfo.xml",
+        "install -Dm644 data/icons/hicolor/scalable/apps/org.tunaos.InstallerNiri.svg /app/share/icons/hicolor/scalable/apps/org.tunaos.InstallerNiri.svg"
       ],
       "sources": [{ "type": "dir", "path": ".." }]
     }
