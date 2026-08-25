@@ -89,20 +89,12 @@ func main() {
 	}
 }
 
-func discoverDisks() {
-	cmd := exec.Command("lsblk", "-J", "-o", "NAME,SIZE,TYPE,TRAN")
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "lsblk failed: %v\n", err)
-		os.Exit(1)
-	}
-
+func parseLSBLKOutput(output []byte) ([]DiskInfo, error) {
 	var result struct {
 		Blockdevices []json.RawMessage `json:"blockdevices"`
 	}
 	if err := json.Unmarshal(output, &result); err != nil {
-		fmt.Fprintf(os.Stderr, "parse lsblk output: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("parse lsblk output: %w", err)
 	}
 
 	var disks []DiskInfo
@@ -114,6 +106,22 @@ func discoverDisks() {
 		if d.Type == "disk" {
 			disks = append(disks, d)
 		}
+	}
+	return disks, nil
+}
+
+func discoverDisks() {
+	cmd := exec.Command("lsblk", "-J", "-o", "NAME,SIZE,TYPE,TRAN")
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "lsblk failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	disks, err := parseLSBLKOutput(output)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 
 	enc := json.NewEncoder(os.Stdout)
