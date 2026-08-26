@@ -97,12 +97,26 @@ func discoverDisks() {
 		os.Exit(1)
 	}
 
+	disks, err := parseLSBLKOutput(output)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "parse lsblk output: %v\n", err)
+		os.Exit(1)
+	}
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(disks); err != nil {
+		fmt.Fprintf(os.Stderr, "encode output: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseLSBLKOutput(output []byte) ([]DiskInfo, error) {
 	var result struct {
 		Blockdevices []json.RawMessage `json:"blockdevices"`
 	}
 	if err := json.Unmarshal(output, &result); err != nil {
-		fmt.Fprintf(os.Stderr, "parse lsblk output: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	var disks []DiskInfo
@@ -115,13 +129,7 @@ func discoverDisks() {
 			disks = append(disks, d)
 		}
 	}
-
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(disks); err != nil {
-		fmt.Fprintf(os.Stderr, "encode output: %v\n", err)
-		os.Exit(1)
-	}
+	return disks, nil
 }
 
 // detectEnvironment reports offline-install facts for the QML frontend.
