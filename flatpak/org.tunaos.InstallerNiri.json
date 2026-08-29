@@ -48,7 +48,7 @@
         {
           "type": "git",
           "url": "https://github.com/projectbluefin/fisherman.git",
-          "branch": "dev"
+          "commit": "35c8f6f1643f48cb49c8b3f2b67f70a8db16cd46"
         }
       ]
     },
