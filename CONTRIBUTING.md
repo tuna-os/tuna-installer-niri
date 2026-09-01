@@ -4,7 +4,9 @@ Thank you for contributing to `tuna-installer-niri`! This document provides inst
 
 ## Prerequisites
 
-- **Go**: 1.22+ (for building and testing the installer backend)
+- **Go**: 1.24+ (for building and testing the installer backend; follow the
+  version declared in `installer/go.mod`. The Flatpak build uses its own pinned
+  toolchain.)
 - **Quickshell**: Required for running the QML UI directly on Niri/Wayland
 - **Python 3 & PyQt6**: (Optional) Required for running headless UI tests and screenshot generation
 
