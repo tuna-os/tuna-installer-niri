@@ -69,6 +69,28 @@ GPL-3.0-only
 stores as JSON; the QML layer uses it to offer "install this system, no
 download" and passes stores as `additionalImageStores`.
 
+## Testing
+
+### Go Backend Unit Tests
+
+```bash
+cd installer
+go test ./...
+```
+
+### Headless UI Screenshot Capture & Verification
+
+The installer UI can be rendered and tested headlessly without running a full Wayland/Quickshell compositor:
+
+```bash
+pip install PyQt6
+python3 tests/gui/capture-screens.py docs/screenshots
+```
+
+## Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development workflows, testing requirements, and guidelines.
+
 ## Development
 
 ```bash
@@ -82,3 +104,4 @@ TUNA_BACKEND=$PWD/tuna-installer-backend quickshell -p ../ui/installer.qml
 flatpak-builder --user --install --force-clean build flatpak/org.tunaos.InstallerNiri.json
 flatpak run org.tunaos.InstallerNiri
 ```
+
