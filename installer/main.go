@@ -203,11 +203,28 @@ func runInstall(recipeJSON string) {
 	// pkexec /app/bin/fisherman in Flatpak, sudo /usr/local/bin/fisherman otherwise.
 	argv := append(fishermanCommand(), recipePath)
 	cmd := exec.Command(argv[0], argv[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "fisherman failed: %v\n", err)
+	// Tee fisherman's output to a persistent log in addition to the pipe
+	// Quickshell reads (root.installLog in installer.qml) — that property is
+	// in-memory only and gone the moment the window closes.
+	logFile, logErr := openInstallLog()
+	if logErr != nil {
+		fmt.Fprintf(os.Stderr, "install log: %v\n", logErr)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	} else {
+		defer logFile.Close()
+		fmt.Fprintf(logFile, "=== install started, recipe=%s ===\n", recipePath)
+		cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+	}
+
+	runErr := cmd.Run()
+	if logFile != nil {
+		fmt.Fprintf(logFile, "=== install exited: %v ===\n", runErr)
+	}
+	if runErr != nil {
+		fmt.Fprintf(os.Stderr, "fisherman failed: %v\n", runErr)
 		os.Exit(1)
 	}
 }
