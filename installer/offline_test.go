@@ -106,6 +106,18 @@ func TestWriteRecipe(t *testing.T) {
 	}
 }
 
+// A nonexistent XDG_RUNTIME_DIR means os.MkdirTemp itself fails (its base
+// argument must already exist) — writeRecipe must surface that error rather
+// than panic or write somewhere unexpected.
+func TestWriteRecipeFailsWhenBaseDirMissing(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	t.Setenv("XDG_RUNTIME_DIR", missing)
+
+	if _, err := writeRecipe([]byte("{}")); err == nil {
+		t.Fatal("writeRecipe() with a nonexistent base dir succeeded, want error")
+	}
+}
+
 func TestWriteRecipeFallsBackToTmp(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", "")
 	path, err := writeRecipe([]byte("{}"))

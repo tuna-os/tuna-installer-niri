@@ -21,6 +21,35 @@ func TestInstallLogDirFallsBackToHome(t *testing.T) {
 	}
 }
 
+// installLogDir returns "" when neither XDG_STATE_HOME nor HOME resolve —
+// openInstallLog must report that as an error, not hand os.MkdirAll an empty
+// path (which would silently operate on the process's cwd).
+func TestOpenInstallLogFailsWithoutHome(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("HOME", "")
+
+	if _, err := openInstallLog(); err == nil {
+		t.Fatal("openInstallLog() with no XDG_STATE_HOME or HOME succeeded, want error")
+	}
+}
+
+// If something other than a directory already occupies the log directory's
+// path, os.MkdirAll fails — openInstallLog must surface that instead of
+// panicking on the subsequent OpenFile.
+func TestOpenInstallLogFailsWhenDirIsFile(t *testing.T) {
+	base := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", base)
+
+	blocked := filepath.Join(base, "tuna-installer")
+	if err := os.WriteFile(blocked, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := openInstallLog(); err == nil {
+		t.Fatal("openInstallLog() with a file blocking its directory succeeded, want error")
+	}
+}
+
 // A retried install must not clobber the previous attempt's output — that's
 // the run most worth keeping, since it's the one that failed.
 func TestOpenInstallLogAppendsAcrossCalls(t *testing.T) {
