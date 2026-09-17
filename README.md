@@ -1,3 +1,13 @@
+> ## This repository has moved
+>
+> The niri installer now lives in the **bootc-installer monorepo**:
+> [`tuna-os/bootc-installer` → `frontends/niri/`](https://github.com/tuna-os/bootc-installer/tree/dev/frontends/niri).
+> The import on 2026-09-17 kept the full history.
+> [docs/MIGRATION.md](https://github.com/tuna-os/bootc-installer/blob/dev/docs/MIGRATION.md)
+> lists the open pull requests and issues of this repository. Re-home them
+> there. After that, the maintainers archive this repository. Do not open
+> new work here.
+
 # TunaOS Niri Installer — Quickshell + Go installer
 
 <p align="center">
