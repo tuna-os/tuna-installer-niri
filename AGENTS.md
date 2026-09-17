@@ -1,5 +1,10 @@
 # AGENTS.md — agent guide for tuna-os/tuna-installer-niri
 
+> **Moved.** This code is now `frontends/niri/` in `tuna-os/bootc-installer`
+> (imported with history, 2026-09-17). Make changes there, not here; this
+> repository is frozen pending archival. The guide below is kept for
+> reference and matches the monorepo copy apart from workflow paths.
+
 A **Quickshell/QML wizard with a Go backend** that drives the
 [fisherman](https://github.com/tuna-os/fisherman) bootc install backend, for
 the Niri scrollable-tiling Wayland compositor. Architecture is modelled on
